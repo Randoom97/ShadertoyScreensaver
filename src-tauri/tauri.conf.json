@@ -17,13 +17,20 @@
         "open": true
       }
     },
-    "windows": [
-      {
-        "title": "shadertoy_screensaver",
-        "width": 800,
-        "height": 600
-      }
-    ],
+    "cli": {
+      "args": [
+        {
+          "name": "mode",
+          "index": 1,
+          "takesValue": true
+        },
+        {
+          "name": "hwnd",
+          "index": 2,
+          "takesValue": true
+        }
+      ]
+    },
     "security": {
       "csp": null
     },
