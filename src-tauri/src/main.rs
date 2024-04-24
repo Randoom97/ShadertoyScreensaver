@@ -1,6 +1,14 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use tauri::{PhysicalPosition, Position};
+use windows::Win32::{
+    Foundation::{HWND, RECT},
+    UI::WindowsAndMessaging::{
+        GetClientRect, GetWindowLongA, SetParent, SetWindowLongA, GWL_STYLE, WS_CHILD,
+    },
+};
+
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 #[tauri::command]
 fn greet(name: &str) -> String {
@@ -8,7 +16,7 @@ fn greet(name: &str) -> String {
 }
 
 fn build_config_window(app: &tauri::App) -> tauri::Window {
-    return tauri::WindowBuilder::new(app, "config", tauri::WindowUrl::App("index.html".into()))
+    return tauri::WindowBuilder::new(app, "config", tauri::WindowUrl::App("config.html".into()))
         .build()
         .unwrap();
 }
@@ -22,7 +30,7 @@ fn build_screensaver_window(app: &tauri::App) -> tauri::Window {
     .build()
     .unwrap();
 
-    // screensaver_window.set_fullscreen(true).unwrap();
+    screensaver_window.set_fullscreen(true).unwrap();
 
     return screensaver_window;
 }
@@ -49,19 +57,42 @@ fn main() {
         .args
         .get("hwnd")
         .and_then(|argument| match argument.value.clone() {
-            serde_json::Value::String(string) => {
-                Some(str::parse::<i32>(string.as_str()).expect("hwnd must be an integer"))
-            }
+            serde_json::Value::String(string) => Some(
+                str::parse::<isize>(string.as_str()).expect("hwnd must be parseable to an isize"),
+            ),
             _ => None,
         });
 
     match mode.as_str() {
         // Preview mode
         "/p" => {
-            let preview_window_handle = hwnd_option.expect("hwnd must be present for preview mode");
             let screensaver_window = build_screensaver_window(&app);
-            let hwnd = screensaver_window.hwnd();
-            // TODO: figure out what crate this HWND is from, and if it exposes the api from user32
+
+            let preview_window_handle =
+                HWND(hwnd_option.expect("hwnd must be present for preview mode"));
+            let window_handle = screensaver_window.hwnd().unwrap();
+
+            unsafe {
+                // set the preview window as the parent of this window
+                SetParent(window_handle, preview_window_handle);
+
+                // make this a child window so it will close when the parent dialog closes
+                SetWindowLongA(
+                    window_handle,
+                    GWL_STYLE,
+                    GetWindowLongA(window_handle, GWL_STYLE) | WS_CHILD.0 as i32,
+                );
+
+                // place our window inside the parent
+                let mut parent_rectangle: RECT = RECT::default();
+                GetClientRect(preview_window_handle, &mut parent_rectangle);
+                screensaver_window
+                    .set_position(Position::Physical(PhysicalPosition::new(
+                        parent_rectangle.right - parent_rectangle.left,
+                        parent_rectangle.bottom - parent_rectangle.top,
+                    )))
+                    .unwrap();
+            }
         }
         // Normal running mode
         "/s" => {

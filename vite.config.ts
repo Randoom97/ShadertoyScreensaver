@@ -18,4 +18,13 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+
+  build: {
+    rollupOptions: {
+      input: {
+        config: "./config.html",
+        screensaver: "./screensaver.html",
+      }
+    }
+  }
 }));
