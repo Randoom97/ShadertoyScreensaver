@@ -1,5 +1,5 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+// #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{PhysicalPosition, Position};
 use windows::Win32::{
@@ -9,11 +9,9 @@ use windows::Win32::{
     },
 };
 
-// Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
+mod secret;
+mod shadertoy_api;
+mod tauri_commands;
 
 fn build_config_window(app: &tauri::App) -> tauri::Window {
     return tauri::WindowBuilder::new(app, "config", tauri::WindowUrl::App("config.html".into()))
@@ -37,7 +35,10 @@ fn build_screensaver_window(app: &tauri::App) -> tauri::Window {
 
 fn main() {
     let app = tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![
+            tauri_commands::get_shaders,
+            tauri_commands::get_shader
+        ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");
 
