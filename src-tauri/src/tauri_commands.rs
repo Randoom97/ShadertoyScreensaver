@@ -15,6 +15,27 @@ Keep in sync with tauri-commands.ts
 // Learn more about Tauri commands at https://tauri.app/v1/guides/features/command
 
 #[derive(Serialize, Deserialize, Debug)]
+pub enum SortBy {
+    Name,
+    Love,
+    Popular,
+    Newest,
+    Hot,
+}
+
+impl SortBy {
+    pub fn as_str(&self) -> &'static str {
+        return match self {
+            SortBy::Name => "name",
+            SortBy::Love => "love",
+            SortBy::Popular => "popular",
+            SortBy::Newest => "newest",
+            SortBy::Hot => "hot",
+        };
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 #[allow(non_snake_case)] // blame shadertoy's api
 pub struct Shaders {
     Shaders: u64,
@@ -80,8 +101,26 @@ struct Sampler {
 }
 
 #[tauri::command]
-pub async fn get_shaders() -> Result<Shaders, String> {
-    return print_and_map_error(shadertoy_api::get_shaders().await);
+pub async fn get_shaders(
+    sort_by: Option<SortBy>,
+    page_size: Option<u64>,
+    page_number: Option<u64>,
+) -> Result<Shaders, String> {
+    return print_and_map_error(
+        shadertoy_api::get_shaders(&sort_by, &page_size, &page_number).await,
+    );
+}
+
+#[tauri::command]
+pub async fn query_shaders(
+    query: String,
+    sort_by: Option<SortBy>,
+    page_size: Option<u64>,
+    page_number: Option<u64>,
+) -> Result<Shaders, String> {
+    return print_and_map_error(
+        shadertoy_api::query_shaders(&query, &sort_by, &page_size, &page_number).await,
+    );
 }
 
 #[tauri::command]

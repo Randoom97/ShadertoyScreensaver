@@ -37,7 +37,8 @@ fn main() {
     let app = tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             tauri_commands::get_shaders,
-            tauri_commands::get_shader
+            tauri_commands::query_shaders,
+            tauri_commands::get_shader,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

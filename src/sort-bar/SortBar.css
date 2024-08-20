@@ -1,0 +1,9 @@
+.sort-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.sort-bar-text {
+    margin: 4px 8px;
+}
