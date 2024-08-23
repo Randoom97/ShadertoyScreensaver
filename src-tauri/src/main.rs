@@ -1,6 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use shadertoy_api::ShadertoyAPI;
 use tauri::{PhysicalPosition, Position};
 use windows::Win32::{
     Foundation::{HWND, RECT},
@@ -35,6 +36,7 @@ fn build_screensaver_window(app: &tauri::App) -> tauri::Window {
 
 fn main() {
     let app = tauri::Builder::default()
+        .manage(ShadertoyAPI::new())
         .invoke_handler(tauri::generate_handler![
             tauri_commands::get_shaders,
             tauri_commands::query_shaders,

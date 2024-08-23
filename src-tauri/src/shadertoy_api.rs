@@ -3,12 +3,13 @@ use std::collections::HashMap;
 use std::error::Error;
 
 use serde::Deserialize;
+use tauri::async_runtime::Mutex;
 
 use crate::secret::API_TOKEN;
 use crate::tauri_commands::{Shader, Shaders, SortBy};
 
 const BASE_URL: &str = "https://www.shadertoy.com/api/v1";
-const DEFAULT_PAGE_SIZE: u64 = 10;
+const DEFAULT_PAGE_SIZE: u64 = 12;
 
 #[derive(Deserialize, Debug)]
 #[allow(non_snake_case)] // blame shadertoy's api
@@ -16,52 +17,73 @@ pub struct ShaderContainer {
     Shader: Shader,
 }
 
-pub async fn get_shaders(
-    sort_by: &Option<SortBy>,
-    page_size: &Option<u64>,
-    page_number: &Option<u64>,
-) -> Result<Shaders, Box<dyn Error>> {
-    let mut params = HashMap::new();
-    if sort_by.is_some() {
-        params.insert("sort", sort_by.as_ref().unwrap().as_str().to_owned());
-    }
-    let psize = page_size.unwrap_or(DEFAULT_PAGE_SIZE);
-    params.insert("num", psize.to_string());
-    if page_number.is_some() {
-        params.insert("from", (psize * page_number.unwrap()).to_string());
-    }
-
-    let url = make_url("/shaders", &mut params)?;
-    return Ok(reqwest::get(url).await?.json::<Shaders>().await?);
+pub struct ShadertoyAPI {
+    shader_info_cache: Mutex<HashMap<String, Shader>>,
 }
 
-pub async fn query_shaders(
-    query: &str,
-    sort_by: &Option<SortBy>,
-    page_size: &Option<u64>,
-    page_number: &Option<u64>,
-) -> Result<Shaders, Box<dyn Error>> {
-    let mut params = HashMap::new();
-    if sort_by.is_some() {
-        params.insert("sort", sort_by.as_ref().unwrap().as_str().to_owned());
-    }
-    let psize = page_size.unwrap_or(DEFAULT_PAGE_SIZE);
-    params.insert("num", psize.to_string());
-    if page_number.is_some() {
-        params.insert("from", (psize * page_number.unwrap()).to_string());
+impl ShadertoyAPI {
+    pub fn new() -> ShadertoyAPI {
+        return ShadertoyAPI {
+            shader_info_cache: Mutex::new(HashMap::new()),
+        };
     }
 
-    let url = make_url(&format!("/shaders/query/{query}"), &mut params)?;
-    return Ok(reqwest::get(url).await?.json::<Shaders>().await?);
-}
+    pub async fn get_shaders(
+        &self,
+        sort_by: &Option<SortBy>,
+        page_size: &Option<u64>,
+        page_number: &Option<u64>,
+    ) -> Result<Shaders, Box<dyn Error>> {
+        let mut params = HashMap::new();
+        if sort_by.is_some() {
+            params.insert("sort", sort_by.as_ref().unwrap().as_str().to_owned());
+        }
+        let psize = page_size.unwrap_or(DEFAULT_PAGE_SIZE);
+        params.insert("num", psize.to_string());
+        if page_number.is_some() {
+            params.insert("from", (psize * page_number.unwrap()).to_string());
+        }
 
-pub async fn get_shader_info(shader_id: String) -> Result<Shader, Box<dyn Error>> {
-    let url = make_url(&format!("/shaders/{shader_id}"), &mut HashMap::new())?;
-    return Ok(reqwest::get(url)
-        .await?
-        .json::<ShaderContainer>()
-        .await?
-        .Shader);
+        let url = make_url("/shaders", &mut params)?;
+        return Ok(reqwest::get(url).await?.json::<Shaders>().await?);
+    }
+
+    pub async fn query_shaders(
+        &self,
+        query: &str,
+        sort_by: &Option<SortBy>,
+        page_size: &Option<u64>,
+        page_number: &Option<u64>,
+    ) -> Result<Shaders, Box<dyn Error>> {
+        let mut params = HashMap::new();
+        if sort_by.is_some() {
+            params.insert("sort", sort_by.as_ref().unwrap().as_str().to_owned());
+        }
+        let psize = page_size.unwrap_or(DEFAULT_PAGE_SIZE);
+        params.insert("num", psize.to_string());
+        if page_number.is_some() {
+            params.insert("from", (psize * page_number.unwrap()).to_string());
+        }
+
+        let url = make_url(&format!("/shaders/query/{query}"), &mut params)?;
+        return Ok(reqwest::get(url).await?.json::<Shaders>().await?);
+    }
+
+    pub async fn get_shader_info(&self, shader_id: String) -> Result<Shader, Box<dyn Error>> {
+        let mut cache = self.shader_info_cache.lock().await;
+        if cache.contains_key(&shader_id) {
+            return Ok(cache.get(&shader_id).unwrap().to_owned());
+        }
+
+        let url = make_url(&format!("/shaders/{shader_id}"), &mut HashMap::new())?;
+        let shader = reqwest::get(url)
+            .await?
+            .json::<ShaderContainer>()
+            .await?
+            .Shader;
+        cache.insert(shader_id, shader.clone());
+        return Ok(shader);
+    }
 }
 
 fn make_url(
