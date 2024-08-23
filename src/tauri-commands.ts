@@ -21,7 +21,7 @@ interface Shaders {
   Results: string[];
 }
 
-interface Shader {
+export interface Shader {
   ver: string;
   info: Info;
   renderpass: RenderPass[];
@@ -73,20 +73,18 @@ interface Sampler {
 }
 
 export function getShaders(
-  sortBy?: SortBy,
-  pageSize?: number,
-  pageNumber?: number
+  args: { sortBy?: SortBy; pageSize?: number; pageNumber?: number } = {}
 ): Promise<Shaders> {
-  return invoke("get_shaders", { sortBy, pageSize, pageNumber });
+  return invoke("get_shaders", args);
 }
 
-export function queryShaders(
-  query: string,
-  sortBy?: SortBy,
-  pageSize?: number,
-  pageNumber?: number
-) {
-  return invoke("query_shaders", { query, sortBy, pageSize, pageNumber });
+export function queryShaders(args: {
+  query: string;
+  sortBy?: SortBy;
+  pageSize?: number;
+  pageNumber?: number;
+}) {
+  return invoke("query_shaders", args);
 }
 
 export function getShader(id: string): Promise<Shader> {

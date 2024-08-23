@@ -19,6 +19,7 @@ export function SortBar({
 
         return (
           <button
+            key={sortBy}
             type="submit"
             className={classNames.join(" ")}
             onClick={() => onSortByChange(sortBy)}

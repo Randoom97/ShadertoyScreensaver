@@ -1,0 +1,28 @@
+.gallery-tile {
+    display: flex;
+    flex-direction: column;
+}
+
+.gallery-tile-title {
+    margin: 0px;
+    margin-bottom: 4px;
+}
+
+.gallery-tile-canvas {
+    border: 1px solid #808080;
+    border-radius: 4px;
+    width: 100%;
+}
+
+.gallery-tile-controls {
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 0;
+    padding-top: 4px;
+    gap: 4px;
+    justify-content: center;
+    button {
+        margin: 0;
+        white-space: nowrap;
+    }
+}

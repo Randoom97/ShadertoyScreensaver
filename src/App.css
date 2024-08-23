@@ -1,7 +1,14 @@
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
 }
 
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafb);
+.sort-bar {
+  flex-shrink: 0;
+}
+
+.gallery {
+  flex-grow: 1;
 }
