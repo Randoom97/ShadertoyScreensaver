@@ -73,6 +73,7 @@ struct RenderPass {
     code: String,
     name: String,
     description: String,
+    r#type: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

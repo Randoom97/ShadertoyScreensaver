@@ -42,12 +42,19 @@ interface Info {
   hasliked: number;
 }
 
-interface RenderPass {
+export enum RenderPassType {
+  Common = "common",
+  Image = "image",
+  Buffer = "buffer",
+}
+
+export interface RenderPass {
   inputs: Input[];
   outputs: Output[];
   code: string;
   name: string;
   description: string;
+  type: RenderPassType;
 }
 
 interface Input {

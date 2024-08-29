@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import "./GalleryTile.css";
 import { getShader, Shader } from "../../tauri-commands";
+import { ShaderCanvas } from "../../shader-canvas/ShaderCanvas";
 
 export function GalleryTile({ shaderId }: { shaderId: string }) {
   let [shader, setShader] = useState<Shader | undefined>(undefined);
@@ -22,7 +23,7 @@ export function GalleryTile({ shaderId }: { shaderId: string }) {
         </a>
       </div>
 
-      <canvas className="gallery-tile-canvas"></canvas>
+      {shader && <ShaderCanvas shader={shader}></ShaderCanvas>}
 
       <div className="gallery-tile-controls">
         <button onClick={() => onViewOnShadertoy(shaderId)}>
