@@ -1,5 +1,5 @@
 import "./SortBar.css";
-import { SortBy } from "../tauri-commands";
+import { SortBy } from "../../utilities/tauri-commands";
 
 export function SortBar({
   currentSortBy,

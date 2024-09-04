@@ -49,15 +49,15 @@ export enum RenderPassType {
 }
 
 export interface RenderPass {
-  inputs: Input[];
-  outputs: Output[];
+  inputs: RenderPassInput[];
+  outputs: RenderPassOutput[];
   code: string;
   name: string;
   description: string;
   type: RenderPassType;
 }
 
-interface Input {
+export interface RenderPassInput {
   id: number;
   src: string;
   ctype: string;
@@ -66,7 +66,7 @@ interface Input {
   published: number;
 }
 
-interface Output {
+interface RenderPassOutput {
   id: number;
   channel: number;
 }

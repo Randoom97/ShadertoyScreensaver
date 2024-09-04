@@ -1,5 +1,5 @@
 import "./App.css";
-import { SortBy, getShaders } from "./tauri-commands";
+import { SortBy, getShaders } from "../utilities/tauri-commands";
 import { SortBar } from "./sort-bar/SortBar";
 import { Gallery } from "./gallery/Gallery";
 import { useEffect, useState } from "react";
@@ -11,10 +11,10 @@ export function App() {
 
   useEffect(() => {
     setShaderIds([]);
-    // setShaderIds(["XcfBRn", "XffBzl", "Xds3zN"]);
-    getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>
-      setShaderIds(shaders.Results)
-    );
+    setShaderIds(["MsKcRh", "XltGRX", "XcfBRn", "XffBzl", "Xds3zN"]);
+    // getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>
+    //   setShaderIds(shaders.Results)
+    // );
   }, [sortBy]);
 
   return (

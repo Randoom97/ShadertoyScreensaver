@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import "./GalleryTile.css";
-import { getShader, Shader } from "../../tauri-commands";
+import { getShader, Shader } from "../../../utilities/tauri-commands";
 import { ShaderCanvas } from "../../shader-canvas/ShaderCanvas";
 
 export function GalleryTile({ shaderId }: { shaderId: string }) {

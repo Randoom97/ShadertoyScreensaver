@@ -1,6 +1,13 @@
-import { RenderPass, RenderPassType, Shader } from "./tauri-commands";
+import { loadImage } from "./image-loader";
+import {
+  RenderPass,
+  RenderPassInput,
+  RenderPassType,
+  Shader,
+} from "./tauri-commands";
 
 export interface GLShader {
+  metadata: RenderPass;
   program: WebGLProgram;
   attributes: {
     pos: GLint;
@@ -8,18 +15,26 @@ export interface GLShader {
   uniforms: {
     iResolution: WebGLUniformLocation;
     iTime: WebGLUniformLocation;
+    iFrameRate: WebGLUniformLocation;
+    iChannels: (WebGLUniformLocation | undefined)[];
   };
 }
 
 export interface ShaderToy {
   image: GLShader;
-  buffers: Map<number, GLShader>;
+  bufferShaders: GLShader[];
+  buffers: Map<number, BufferPair>;
 }
 
-export function initShader(
+export interface BufferPair {
+  frameBuffer: WebGLFramebuffer;
+  texture: WebGLTexture;
+}
+
+export async function initShader(
   gl: WebGL2RenderingContext,
   shader: Shader
-): ShaderToy | null {
+): Promise<ShaderToy | null> {
   const image = shader.renderpass.find(
     (renderpass) => renderpass.type === RenderPassType.Image
   );
@@ -37,24 +52,38 @@ export function initShader(
     return null;
   }
 
-  const buffers = new Map<number, GLShader>();
-  let bufferInitHadError = false;
-  shader.renderpass
+  const bufferShaders = shader.renderpass
     .filter((renderpass) => renderpass.type === RenderPassType.Buffer)
-    .forEach((renderpass) => {
-      const glShader = initRenderPass(gl, renderpass, common);
-      if (!glShader) {
-        bufferInitHadError = true;
-        return;
-      }
-      buffers.set(renderpass.outputs[0].id, glShader);
-    });
-  if (bufferInitHadError) {
+    .map((renderpass) => initRenderPass(gl, renderpass, common));
+  if (bufferShaders.some((shader) => shader === null)) {
     return null;
+  }
+
+  const buffers = new Map<number, BufferPair>();
+  for (const renderpass of shader.renderpass) {
+    renderpass.inputs
+      .filter((input) => input.ctype === "buffer")
+      .forEach((input) => {
+        if (input.id in buffers) {
+          return;
+        }
+        buffers.set(input.id, createBufferPair(gl, input));
+      });
+
+    // for (const input of renderpass.inputs.filter(
+    //   (input) => input.ctype === "texture"
+    // )) {
+    //   if (input.id in buffers) {
+    //     continue;
+    //   }
+    //   const image = await loadImage(input.src);
+    //   buffers.set(input.id, createBufferPair(gl, input, image));
+    // }
   }
 
   return {
     image: imageShader,
+    bufferShaders: bufferShaders as GLShader[], // type checked to not have null just after creation
     buffers,
   };
 }
@@ -74,17 +103,15 @@ precision lowp float;
 uniform vec3 iResolution;
 uniform float iTime;
 uniform float iTimeDelta;
+uniform float iFrameRate;
 uniform int iFrame;
 uniform float iChannelTime[4];
+uniform vec3 iChannelResolution[4];
 uniform vec4 iMouse;
 uniform vec4 iDate;
-uniform float iSampleRate;
-uniform vec3 iChannelResolution[4];
-// uniform samplerXX iChannel0; sampler2D or samplerCube
-// uniform samplerXX iChannel1;
-// uniform samplerXX iChannel2;
-// uniform samplerXX iChannel3;
+uniform float iSampleRate;`;
 
+const fragmentMain = `
 out vec4 fragColor;
 void mainImage( out vec4 fragColor, in vec2 fragCoord );
 void main(void) { 
@@ -101,11 +128,22 @@ function initRenderPass(
   if (vertexShader === null) {
     return null;
   }
-  const fragmentShader = createGLShader(
-    gl,
-    gl.FRAGMENT_SHADER,
-    fragmentHeader + (common ? common.code : "") + renderPass.code
-  );
+
+  let fragmentSource = fragmentHeader;
+
+  renderPass.inputs.forEach((input) => {
+    fragmentSource += `
+    uniform sampler2D iChannel${input.channel};`; // TODO needs to be a samplerCube if id matches output id of cubemap renderpass
+  });
+
+  fragmentSource += fragmentMain;
+
+  if (common) {
+    fragmentSource += common.code;
+  }
+  fragmentSource += renderPass.code;
+
+  const fragmentShader = createGLShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
   if (fragmentShader === null) {
     return null;
   }
@@ -123,6 +161,7 @@ function initRenderPass(
   }
 
   return {
+    metadata: renderPass,
     program: shaderProgram,
     attributes: {
       pos: gl.getAttribLocation(shaderProgram, "position"),
@@ -130,6 +169,13 @@ function initRenderPass(
     uniforms: {
       iResolution: gl.getUniformLocation(shaderProgram, "iResolution")!,
       iTime: gl.getUniformLocation(shaderProgram, "iTime")!,
+      iFrameRate: gl.getUniformLocation(shaderProgram, "iFrameRate")!,
+      iChannels: [
+        gl.getUniformLocation(shaderProgram, "iChannel0") ?? undefined,
+        gl.getUniformLocation(shaderProgram, "iChannel1") ?? undefined,
+        gl.getUniformLocation(shaderProgram, "iChannel2") ?? undefined,
+        gl.getUniformLocation(shaderProgram, "iChannel3") ?? undefined,
+      ],
     },
   };
 }
@@ -152,6 +198,51 @@ function createGLShader(
   }
 
   return shader;
+}
+
+function createBufferPair(
+  gl: WebGL2RenderingContext,
+  input: RenderPassInput,
+  image: HTMLImageElement | null = null
+): BufferPair {
+  const texture = gl.createTexture()!;
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  if (image) {
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+  } else {
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.canvas.width,
+      gl.canvas.height,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null
+    );
+  }
+  // TODO use input.sampler here to set these parameters
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+  const frameBuffer = gl.createFramebuffer()!;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+  gl.framebufferTexture2D(
+    gl.FRAMEBUFFER,
+    gl.COLOR_ATTACHMENT0,
+    gl.TEXTURE_2D,
+    texture,
+    0
+  );
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  return { texture, frameBuffer };
 }
 
 // because shader code is being spliced together, the line numbers from the info log are hard to match without this

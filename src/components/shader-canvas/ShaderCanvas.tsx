@@ -1,7 +1,7 @@
 import "./ShaderCanvas.css";
-import { Shader } from "../tauri-commands";
-import { initShader } from "../shader-setup";
-import { renderShader } from "../shader-render";
+import { Shader } from "../../utilities/tauri-commands";
+import { initShader } from "../../utilities/shader-setup";
+import { renderShaderToy } from "../../utilities/shader-render";
 import { createRef, useLayoutEffect, useState } from "react";
 
 export function ShaderCanvas({ shader }: { shader: Shader }) {
@@ -20,10 +20,10 @@ export function ShaderCanvas({ shader }: { shader: Shader }) {
   return <canvas ref={canvasRef} className="shader-canvas"></canvas>;
 }
 
-function setup(gl: WebGL2RenderingContext, shader: Shader) {
-  const shaderToy = initShader(gl, shader);
+async function setup(gl: WebGL2RenderingContext, shader: Shader) {
+  const shaderToy = await initShader(gl, shader);
   if (!shaderToy) {
     return;
   }
-  renderShader(gl, shaderToy);
+  renderShaderToy(gl, shaderToy);
 }
