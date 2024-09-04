@@ -41,6 +41,7 @@ fn main() {
             tauri_commands::get_shaders,
             tauri_commands::query_shaders,
             tauri_commands::get_shader,
+            tauri_commands::get_media_path,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application");

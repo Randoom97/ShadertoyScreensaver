@@ -13,7 +13,7 @@ export function renderShaderToy(
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   });
 
-  gl.clearColor(0.0, 0.0, 0.0, 0.0);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
   renderShader(gl, shaderToy.image, shaderToy.buffers);
 }

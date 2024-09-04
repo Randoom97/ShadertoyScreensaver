@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use std::error::Error;
+use std::io::Read;
 
 use serde::Deserialize;
 use tauri::async_runtime::Mutex;
@@ -19,13 +20,15 @@ pub struct ShaderContainer {
 
 pub struct ShadertoyAPI {
     shader_info_cache: Mutex<HashMap<String, Shader>>,
+    client: reqwest::Client,
 }
 
 impl ShadertoyAPI {
     pub fn new() -> ShadertoyAPI {
-        return ShadertoyAPI {
+        ShadertoyAPI {
             shader_info_cache: Mutex::new(HashMap::new()),
-        };
+            client: reqwest::Client::new(),
+        }
     }
 
     pub async fn get_shaders(
@@ -45,7 +48,8 @@ impl ShadertoyAPI {
         }
 
         let url = make_url("/shaders", &mut params)?;
-        return Ok(reqwest::get(url).await?.json::<Shaders>().await?);
+
+        return Ok(self.client.get(url).send().await?.json::<Shaders>().await?);
     }
 
     pub async fn query_shaders(
@@ -66,7 +70,7 @@ impl ShadertoyAPI {
         }
 
         let url = make_url(&format!("/shaders/query/{query}"), &mut params)?;
-        return Ok(reqwest::get(url).await?.json::<Shaders>().await?);
+        return Ok(self.client.get(url).send().await?.json::<Shaders>().await?);
     }
 
     pub async fn get_shader_info(&self, shader_id: String) -> Result<Shader, Box<dyn Error>> {
@@ -76,13 +80,31 @@ impl ShadertoyAPI {
         }
 
         let url = make_url(&format!("/shaders/{shader_id}"), &mut HashMap::new())?;
-        let shader = reqwest::get(url)
+        let shader = self
+            .client
+            .get(url)
+            .send()
             .await?
             .json::<ShaderContainer>()
             .await?
             .Shader;
         cache.insert(shader_id, shader.clone());
         return Ok(shader);
+    }
+
+    pub async fn get_media(&self, path: String) -> Result<Vec<u8>, Box<dyn Error>> {
+        let url = reqwest::Url::parse(&format!("https://www.shadertoy.com{path}"))?;
+        let bytes: Vec<u8> = self
+            .client
+            .get(url)
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .bytes()
+            .flatten()
+            .collect();
+        return Ok(bytes);
     }
 }
 

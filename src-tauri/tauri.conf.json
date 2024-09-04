@@ -16,9 +16,9 @@
         "all": false,
         "open": true
       },
-      "http": {
-        "request": true,
-        "scope": ["https://www.shadertoy.com/*"]
+      "protocol": {
+        "asset": true,
+        "assetScope": ["$APPDATA/**/*"]
       }
     },
     "cli": {
@@ -36,7 +36,10 @@
       ]
     },
     "security": {
-      "csp": null
+      "csp": {
+        "default-src": "'self'",
+        "img-src": "'self' asset: https://asset.localhost"
+      }
     },
     "bundle": {
       "active": true,

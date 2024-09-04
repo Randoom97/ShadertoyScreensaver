@@ -11,7 +11,8 @@ export function App() {
 
   useEffect(() => {
     setShaderIds([]);
-    setShaderIds(["MsKcRh", "XltGRX", "XcfBRn", "XffBzl", "Xds3zN"]);
+    setShaderIds(["XltGRX", "MsKcRh", "XcfBRn", "XffBzl", "Xds3zN"]);
+    // setShaderIds(["4dcGW2"]); // this one makes use of a buffer it never set up
     // getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>
     //   setShaderIds(shaders.Results)
     // );

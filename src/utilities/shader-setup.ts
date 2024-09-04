@@ -70,15 +70,15 @@ export async function initShader(
         buffers.set(input.id, createBufferPair(gl, input));
       });
 
-    // for (const input of renderpass.inputs.filter(
-    //   (input) => input.ctype === "texture"
-    // )) {
-    //   if (input.id in buffers) {
-    //     continue;
-    //   }
-    //   const image = await loadImage(input.src);
-    //   buffers.set(input.id, createBufferPair(gl, input, image));
-    // }
+    for (const input of renderpass.inputs.filter(
+      (input) => input.ctype === "texture"
+    )) {
+      if (input.id in buffers) {
+        continue;
+      }
+      const image = await loadImage(input.src);
+      buffers.set(input.id, createBufferPair(gl, input, image));
+    }
   }
 
   return {
@@ -224,8 +224,8 @@ function createBufferPair(
   }
   // TODO use input.sampler here to set these parameters
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
   const frameBuffer = gl.createFramebuffer()!;
   gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
@@ -236,8 +236,10 @@ function createBufferPair(
     texture,
     0
   );
-  gl.clearColor(0.0, 0.0, 0.0, 1.0);
-  gl.clear(gl.COLOR_BUFFER_BIT);
+  if (!image) {
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.bindTexture(gl.TEXTURE_2D, null);

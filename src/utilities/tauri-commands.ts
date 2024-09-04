@@ -97,3 +97,7 @@ export function queryShaders(args: {
 export function getShader(id: string): Promise<Shader> {
   return invoke("get_shader", { id });
 }
+
+export function getMediaPath(path: string): Promise<string> {
+  return invoke("get_media_path", { path });
+}

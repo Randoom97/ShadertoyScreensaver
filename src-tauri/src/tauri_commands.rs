@@ -1,4 +1,7 @@
-use std::error::Error;
+use std::{
+    error::Error,
+    fs::{self, File},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -143,4 +146,37 @@ fn print_and_map_error<T>(result: Result<T, Box<dyn Error>>) -> Result<T, String
         println!("{:?}", result.as_ref().err());
     }
     return result.map_err(|err| err.to_string());
+}
+
+#[tauri::command]
+pub async fn get_media_path(
+    app_handle: tauri::AppHandle,
+    shadertoy_api: tauri::State<'_, ShadertoyAPI>,
+    path: String,
+) -> Result<String, String> {
+    let data_dir = app_handle.path_resolver().app_data_dir().unwrap();
+
+    if path.starts_with("$DATA") {
+        // TODO: Downloaded shader
+    } else {
+        let filename = path.rsplit_once("/").unwrap().1;
+        let mut temp_path = data_dir.clone();
+        temp_path.push("temp");
+        let mut full_path = temp_path.clone();
+        full_path.push(filename);
+        if full_path.exists() {
+            return Ok(full_path.to_str().unwrap().to_owned());
+        }
+        fs::create_dir_all(temp_path)
+            .map_err(|err| format!("couldn't create temp directory: {err}"))?;
+        File::create(&full_path).map_err(|err| format!("couldn't create temporary file: {err}"))?;
+        let file_data = shadertoy_api
+            .get_media(path)
+            .await
+            .map_err(|err| format!("failed to download image: {err}"))?;
+        fs::write(&full_path, file_data)
+            .map_err(|err| format!("error writing to temporary file: {err}"))?;
+        return Ok(full_path.to_str().unwrap().to_owned());
+    }
+    return Ok("Something".to_string());
 }
