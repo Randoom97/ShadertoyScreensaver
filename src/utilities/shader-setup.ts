@@ -131,9 +131,9 @@ function initRenderPass(
 
   let fragmentSource = fragmentHeader;
 
-  renderPass.inputs.forEach((input) => {
+  [0, 1, 2, 3].forEach((channel) => {
     fragmentSource += `
-    uniform sampler2D iChannel${input.channel};`; // TODO needs to be a samplerCube if id matches output id of cubemap renderpass
+    uniform sampler2D iChannel${channel};`; // TODO needs to be a samplerCube if id matches output id of cubemap renderpass
   });
 
   fragmentSource += fragmentMain;

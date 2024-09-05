@@ -12,8 +12,8 @@ export function App() {
   useEffect(() => {
     setShaderIds([]);
     // setShaderIds(["XltGRX", "MsKcRh", "XcfBRn", "XffBzl", "Xds3zN"]);
-    // setShaderIds(["4dcGW2"]); // this one makes use of a buffer it never set up
-    setShaderIds(["tlVGDt", "tsXBzS"]); // problem with white backgrounds
+    setShaderIds(["4dcGW2"]); // this one makes use of a buffer it never set up
+    // setShaderIds(["tlVGDt", "tsXBzS"]); // problem with white backgrounds
     // getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>
     //   setShaderIds(shaders.Results)
     // );
