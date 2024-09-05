@@ -9,35 +9,54 @@ export function renderShaderToy(
       bufferShader.metadata.outputs[0].id
     )!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, bufferPair.frameBuffer);
-    renderShader(gl, bufferShader, shaderToy.buffers);
+    renderShader(gl, bufferShader, shaderToy.buffers, shaderToy.inputs);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   });
 
   gl.clearColor(0.0, 0.0, 0.0, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT);
-  renderShader(gl, shaderToy.image, shaderToy.buffers);
+  renderShader(gl, shaderToy.image, shaderToy.buffers, shaderToy.inputs);
 }
 
 export function renderShader(
   gl: WebGL2RenderingContext,
   shader: GLShader,
-  buffers: Map<number, BufferPair>
+  buffers: Map<number, BufferPair>,
+  inputs: Map<number, WebGLTexture>
 ) {
-  const inputs = shader.metadata.inputs
-    .filter((input) => input.ctype === "buffer" || input.ctype === "texture")
-    .map((input) => {
-      return {
-        channel: input.channel,
-        texture: buffers.get(input.id)!.texture,
-      };
-    });
-  render(gl, shader, inputs);
+  const textures: { channel: number; texture: WebGLTexture; type: GLint }[] =
+    shader.metadata.inputs
+      .map((input) => {
+        switch (input.ctype) {
+          case "buffer":
+            return {
+              channel: input.channel,
+              texture: buffers.get(input.id)!.texture,
+              type: gl.TEXTURE_2D,
+            };
+          case "texture":
+            return {
+              channel: input.channel,
+              texture: inputs.get(input.id)!,
+              type: gl.TEXTURE_2D,
+            };
+          case "cubemap":
+            return {
+              channel: input.channel,
+              texture: inputs.get(input.id)!,
+              type: gl.TEXTURE_CUBE_MAP,
+            };
+        }
+        return undefined;
+      })
+      .filter((texture) => texture !== undefined);
+  render(gl, shader, textures);
 }
 
 function render(
   gl: WebGL2RenderingContext,
   shader: GLShader,
-  inputs: { channel: number; texture: WebGLTexture }[] = []
+  inputs: { channel: number; texture: WebGLTexture; type: GLint }[] = []
 ) {
   gl.useProgram(shader.program);
 
@@ -50,7 +69,7 @@ function render(
   inputs.forEach((input) => {
     gl.uniform1i(shader.uniforms.iChannels[input.channel]!, input.channel);
     gl.activeTexture(gl.TEXTURE0 + input.channel);
-    gl.bindTexture(gl.TEXTURE_2D, input.texture);
+    gl.bindTexture(input.type, input.texture);
   });
 
   const vertexBuffer = gl.createBuffer()!;

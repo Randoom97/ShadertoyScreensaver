@@ -24,6 +24,7 @@ export interface ShaderToy {
   image: GLShader;
   bufferShaders: GLShader[];
   buffers: Map<number, BufferPair>;
+  inputs: Map<number, WebGLTexture>;
 }
 
 export interface BufferPair {
@@ -59,25 +60,35 @@ export async function initShader(
     return null;
   }
 
+  const inputs = new Map<number, WebGLTexture>();
   const buffers = new Map<number, BufferPair>();
   for (const renderpass of shader.renderpass) {
-    renderpass.inputs
-      .filter((input) => input.ctype === "buffer")
-      .forEach((input) => {
-        if (input.id in buffers) {
-          return;
-        }
-        buffers.set(input.id, createBufferPair(gl, input));
-      });
-
-    for (const input of renderpass.inputs.filter(
-      (input) => input.ctype === "texture"
-    )) {
-      if (input.id in buffers) {
+    for (const input of renderpass.inputs) {
+      if (input.id in buffers || input.id in inputs) {
         continue;
       }
-      const image = await loadImage(input.src);
-      buffers.set(input.id, createBufferPair(gl, input, image));
+      switch (input.ctype) {
+        case "buffer":
+          buffers.set(input.id, createBufferPair({ gl, input }));
+          break;
+        case "texture":
+          const image = await loadImage(input.src);
+          inputs.set(input.id, createTexture({ gl, input, media: image }));
+          break;
+        case "cubemap":
+          const parts = input.src.split(".");
+          const path = parts[0];
+          const extension = "." + parts[1];
+          // cubemaps have the first url as their soruce. following faces are stored as {id}_1.jpg, {id}_2.jpg ... {id}_5.jpg
+          const images: HTMLImageElement[] = await Promise.all([
+            loadImage(path + extension),
+            ...[1, 2, 3, 4, 5].map((i) =>
+              loadImage(`${path}_${i}${extension}`)
+            ),
+          ]);
+          inputs.set(input.id, createTexture({ gl, input, media: images }));
+          break;
+      }
     }
   }
 
@@ -85,6 +96,7 @@ export async function initShader(
     image: imageShader,
     bufferShaders: bufferShaders as GLShader[], // type checked to not have null just after creation
     buffers,
+    inputs,
   };
 }
 
@@ -131,9 +143,14 @@ function initRenderPass(
 
   let fragmentSource = fragmentHeader;
 
+  const cubemapChannels = renderPass.inputs
+    .filter((input) => input.ctype === "cubemap")
+    .map((input) => input.channel);
   [0, 1, 2, 3].forEach((channel) => {
+    const type =
+      cubemapChannels.find((c) => c === channel) !== undefined ? "Cube" : "2D";
     fragmentSource += `
-    uniform sampler2D iChannel${channel};`; // TODO needs to be a samplerCube if id matches output id of cubemap renderpass
+    uniform sampler${type} iChannel${channel};`;
   });
 
   fragmentSource += fragmentMain;
@@ -200,18 +217,71 @@ function createGLShader(
   return shader;
 }
 
-function createBufferPair(
-  gl: WebGL2RenderingContext,
-  input: RenderPassInput,
-  image: HTMLImageElement | null = null
-): BufferPair {
+function createBufferPair({
+  gl,
+  input,
+  media = null,
+}: {
+  gl: WebGL2RenderingContext;
+  input: RenderPassInput;
+  media?: HTMLImageElement | null;
+}): BufferPair {
+  const texture = createTexture({ gl, input, media });
+
+  const frameBuffer = gl.createFramebuffer()!;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
+  gl.framebufferTexture2D(
+    gl.FRAMEBUFFER,
+    gl.COLOR_ATTACHMENT0,
+    gl.TEXTURE_2D,
+    texture,
+    0
+  );
+  if (media === null) {
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+
+  return { texture, frameBuffer };
+}
+
+function createTexture({
+  gl,
+  input,
+  media,
+}: {
+  gl: WebGL2RenderingContext;
+  input: RenderPassInput;
+  media: HTMLImageElement[] | HTMLImageElement | null;
+}): WebGLTexture {
   const texture = gl.createTexture()!;
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  if (image) {
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+  let textureType: GLint;
+
+  if (media instanceof HTMLImageElement) {
+    textureType = gl.TEXTURE_2D;
+    gl.bindTexture(textureType, texture);
+    gl.texImage2D(textureType, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, media);
+  } else if (media !== null) {
+    textureType = gl.TEXTURE_CUBE_MAP;
+    gl.bindTexture(textureType, texture);
+    media.forEach((media, idx) => {
+      gl.texImage2D(
+        gl.TEXTURE_CUBE_MAP_POSITIVE_X + idx,
+        0,
+        gl.RGB,
+        gl.RGB,
+        gl.UNSIGNED_BYTE,
+        media
+      );
+    });
   } else {
+    textureType = gl.TEXTURE_2D;
+    gl.bindTexture(textureType, texture);
     gl.texImage2D(
-      gl.TEXTURE_2D,
+      textureType,
       0,
       gl.RGBA,
       gl.canvas.width,
@@ -223,28 +293,11 @@ function createBufferPair(
     );
   }
   // TODO use input.sampler here to set these parameters
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+  gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(textureType, gl.TEXTURE_WRAP_S, gl.REPEAT);
+  gl.texParameteri(textureType, gl.TEXTURE_WRAP_T, gl.REPEAT);
 
-  const frameBuffer = gl.createFramebuffer()!;
-  gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(
-    gl.FRAMEBUFFER,
-    gl.COLOR_ATTACHMENT0,
-    gl.TEXTURE_2D,
-    texture,
-    0
-  );
-  if (!image) {
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  }
-
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.bindTexture(gl.TEXTURE_2D, null);
-
-  return { texture, frameBuffer };
+  return texture;
 }
 
 // because shader code is being spliced together, the line numbers from the info log are hard to match without this

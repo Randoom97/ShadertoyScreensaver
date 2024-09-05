@@ -11,9 +11,17 @@ export function App() {
 
   useEffect(() => {
     setShaderIds([]);
-    // setShaderIds(["XltGRX", "MsKcRh", "XcfBRn", "XffBzl", "Xds3zN"]);
-    setShaderIds(["4dcGW2"]); // this one makes use of a buffer it never set up
-    // setShaderIds(["tlVGDt", "tsXBzS"]); // problem with white backgrounds
+    setShaderIds([
+      "MsXGz4", // makes use of a cubemap
+      "tlVGDt", // problem with white background
+      "tsXBzS", // problem with white background
+      "4dcGW2", // uses unbound input
+      "XltGRX", // textures and buffers
+      "MsKcRh", // buffer self dependency
+      "XffBzl", // common code
+      "XcfBRn", // simple
+      "Xds3zN", // macros
+    ]);
     // getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>
     //   setShaderIds(shaders.Results)
     // );
