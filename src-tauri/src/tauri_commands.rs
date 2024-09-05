@@ -155,28 +155,22 @@ pub async fn get_media_path(
     path: String,
 ) -> Result<String, String> {
     let data_dir = app_handle.path_resolver().app_data_dir().unwrap();
-
-    if path.starts_with("$DATA") {
-        // TODO: Downloaded shader
-    } else {
-        let filename = path.rsplit_once("/").unwrap().1;
-        let mut temp_path = data_dir.clone();
-        temp_path.push("temp");
-        let mut full_path = temp_path.clone();
-        full_path.push(filename);
-        if full_path.exists() {
-            return Ok(full_path.to_str().unwrap().to_owned());
-        }
-        fs::create_dir_all(temp_path)
-            .map_err(|err| format!("couldn't create temp directory: {err}"))?;
-        File::create(&full_path).map_err(|err| format!("couldn't create temporary file: {err}"))?;
-        let file_data = shadertoy_api
-            .get_media(path)
-            .await
-            .map_err(|err| format!("failed to download image: {err}"))?;
-        fs::write(&full_path, file_data)
-            .map_err(|err| format!("error writing to temporary file: {err}"))?;
+    let filename = path.rsplit_once("/").unwrap().1;
+    let mut media_path = data_dir.clone();
+    media_path.push("media");
+    let mut full_path = media_path.clone();
+    full_path.push(filename);
+    if full_path.exists() {
         return Ok(full_path.to_str().unwrap().to_owned());
     }
-    return Ok("Something".to_string());
+    fs::create_dir_all(media_path)
+        .map_err(|err| format!("couldn't create media directory: {err}"))?;
+    File::create(&full_path).map_err(|err| format!("couldn't create media file: {err}"))?;
+    let file_data = shadertoy_api
+        .get_media(path)
+        .await
+        .map_err(|err| format!("failed to download image: {err}"))?;
+    fs::write(&full_path, file_data)
+        .map_err(|err| format!("error writing to media file: {err}"))?;
+    return Ok(full_path.to_str().unwrap().to_owned());
 }
