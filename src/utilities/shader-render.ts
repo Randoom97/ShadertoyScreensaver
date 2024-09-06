@@ -10,6 +10,7 @@ export function renderShaderToy(
     )!;
     gl.bindFramebuffer(gl.FRAMEBUFFER, bufferPair.frameBuffer);
     renderShader(gl, bufferShader, shaderToy.buffers, shaderToy.inputs);
+    bufferPair.swapTextures(gl);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   });
 
@@ -31,7 +32,7 @@ export function renderShader(
           case "buffer":
             return {
               channel: input.channel,
-              texture: buffers.get(input.id)!.texture,
+              texture: buffers.get(input.id)!.activeTexture,
               type: gl.TEXTURE_2D,
             };
           case "texture":

@@ -27,9 +27,25 @@ export interface ShaderToy {
   inputs: Map<number, WebGLTexture>;
 }
 
-export interface BufferPair {
-  frameBuffer: WebGLFramebuffer;
-  texture: WebGLTexture;
+export class BufferPair {
+  constructor(
+    public frameBuffer: WebGLFramebuffer,
+    public activeTexture: WebGLTexture,
+    public bufferTexture: WebGLTexture
+  ) {}
+
+  public swapTextures(gl: WebGL2RenderingContext) {
+    const tempTexture = this.activeTexture;
+    this.activeTexture = this.bufferTexture;
+    this.bufferTexture = tempTexture;
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      this.bufferTexture,
+      0
+    );
+  }
 }
 
 export async function initShader(
@@ -220,42 +236,39 @@ function createGLShader(
 function createBufferPair({
   gl,
   input,
-  media = null,
 }: {
   gl: WebGL2RenderingContext;
   input: RenderPassInput;
-  media?: HTMLImageElement | null;
 }): BufferPair {
-  const texture = createTexture({ gl, input, media });
+  const activeTexture = createTexture({ gl, input });
+  const bufferTexture = createTexture({ gl, input });
 
   const frameBuffer = gl.createFramebuffer()!;
   gl.bindFramebuffer(gl.FRAMEBUFFER, frameBuffer);
-  gl.framebufferTexture2D(
-    gl.FRAMEBUFFER,
-    gl.COLOR_ATTACHMENT0,
-    gl.TEXTURE_2D,
-    texture,
-    0
-  );
-  if (media === null) {
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-  }
+  const bufferPair = new BufferPair(frameBuffer, activeTexture, bufferTexture);
+
+  bufferPair.swapTextures(gl);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+
+  bufferPair.swapTextures(gl);
+  gl.clearColor(0.0, 0.0, 0.0, 1.0);
+  gl.clear(gl.COLOR_BUFFER_BIT);
 
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   gl.bindTexture(gl.TEXTURE_2D, null);
 
-  return { texture, frameBuffer };
+  return bufferPair;
 }
 
 function createTexture({
   gl,
   input,
-  media,
+  media = null,
 }: {
   gl: WebGL2RenderingContext;
   input: RenderPassInput;
-  media: HTMLImageElement[] | HTMLImageElement | null;
+  media?: HTMLImageElement[] | HTMLImageElement | null;
 }): WebGLTexture {
   const texture = gl.createTexture()!;
   let textureType: GLint;
@@ -296,6 +309,8 @@ function createTexture({
   gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(textureType, gl.TEXTURE_WRAP_S, gl.REPEAT);
   gl.texParameteri(textureType, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+  gl.bindTexture(textureType, null);
 
   return texture;
 }
