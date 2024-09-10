@@ -1,29 +1,64 @@
 import "./ShaderCanvas.css";
 import { Shader } from "../../utilities/tauri-commands";
-import { initShader } from "../../utilities/shader-setup";
+import { initShader, ShaderToy } from "../../utilities/shader-setup";
 import { renderShaderToy } from "../../utilities/shader-render";
-import { createRef, useLayoutEffect, useState } from "react";
+import { createRef, useEffect, useRef } from "react";
 
-export function ShaderCanvas({ shader }: { shader: Shader }) {
-  const [gl, setGL] = useState<WebGL2RenderingContext | undefined>();
+export function ShaderCanvas({
+  shader,
+  aspectRatio = undefined,
+}: {
+  shader: Shader;
+  aspectRatio: number | undefined;
+}) {
+  const glRef = useRef<WebGL2RenderingContext>();
+  const shaderToyRef = useRef<ShaderToy>();
   const canvasRef = createRef<HTMLCanvasElement>();
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     const canvas = canvasRef.current;
-    setGL(canvas?.getContext("webgl2") ?? undefined);
+    glRef.current = canvas?.getContext("webgl2") ?? undefined;
 
-    if (gl) {
-      setup(gl, shader);
+    if (glRef.current) {
+      const gl = glRef.current;
+      resize(gl, aspectRatio);
+      initShader(gl, shader).then((shaderToy) => {
+        if (!shaderToy) {
+          return;
+        }
+        shaderToyRef.current = shaderToy;
+        renderShaderToy(gl, shaderToy);
+      });
     }
-  });
+
+    function onResize() {
+      const gl = glRef.current;
+      const shaderToy = shaderToyRef.current;
+      if (!gl || !shaderToy) {
+        return;
+      }
+      resize(gl, aspectRatio);
+      renderShaderToy(gl, shaderToy);
+    }
+    window.addEventListener("resize", onResize);
+
+    return () => {
+      window.removeEventListener("resize", onResize);
+      // TODO teardown gl context
+    };
+  }, []);
 
   return <canvas ref={canvasRef} className="shader-canvas"></canvas>;
 }
 
-async function setup(gl: WebGL2RenderingContext, shader: Shader) {
-  const shaderToy = await initShader(gl, shader);
-  if (!shaderToy) {
-    return;
+function resize(gl: WebGL2RenderingContext, aspectRatio: number | undefined) {
+  if (gl.canvas instanceof HTMLCanvasElement) {
+    gl.canvas.width = gl.canvas.clientWidth;
+    if (aspectRatio) {
+      gl.canvas.height = gl.canvas.clientWidth / aspectRatio;
+    } else {
+      gl.canvas.height = gl.canvas.clientHeight;
+    }
   }
-  renderShaderToy(gl, shaderToy);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 }

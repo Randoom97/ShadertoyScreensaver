@@ -92,9 +92,8 @@ export async function initShader(
           inputs.set(input.id, createTexture({ gl, input, media: image }));
           break;
         case "cubemap":
-          const parts = input.src.split(".");
-          const path = parts[0];
-          const extension = "." + parts[1];
+          let [path, extension] = input.src.split(".");
+          extension = "." + extension;
           // cubemaps have the first url as their soruce. following faces are stored as {id}_1.jpg, {id}_2.jpg ... {id}_5.jpg
           const images: HTMLImageElement[] = await Promise.all([
             loadImage(path + extension),

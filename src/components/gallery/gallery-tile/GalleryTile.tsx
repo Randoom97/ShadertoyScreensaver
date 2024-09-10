@@ -23,7 +23,9 @@ export function GalleryTile({ shaderId }: { shaderId: string }) {
         </a>
       </div>
 
-      {shader && <ShaderCanvas shader={shader}></ShaderCanvas>}
+      {shader && (
+        <ShaderCanvas shader={shader} aspectRatio={16 / 9}></ShaderCanvas>
+      )}
 
       <div className="gallery-tile-controls">
         <button onClick={() => onViewOnShadertoy(shaderId)}>
