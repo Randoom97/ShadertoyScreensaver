@@ -314,19 +314,47 @@ function createTexture({
     gl.texImage2D(
       textureType,
       0,
-      gl.RGBA,
+      gl.RGBA32F,
       gl.canvas.width,
       gl.canvas.height,
       0,
       gl.RGBA,
-      gl.UNSIGNED_BYTE,
+      gl.FLOAT,
       null
     );
   }
-  // TODO use input.sampler here to set these parameters
-  gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(textureType, gl.TEXTURE_WRAP_S, gl.REPEAT);
-  gl.texParameteri(textureType, gl.TEXTURE_WRAP_T, gl.REPEAT);
+
+  const wrap = input.sampler.wrap === "clamp" ? gl.CLAMP_TO_EDGE : gl.REPEAT;
+  gl.texParameteri(textureType, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(textureType, gl.TEXTURE_WRAP_T, wrap);
+
+  switch (input.sampler.filter) {
+    case "none":
+      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      break;
+    case "linear":
+      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      break;
+    case "mipmap":
+      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(
+        textureType,
+        gl.TEXTURE_MIN_FILTER,
+        gl.LINEAR_MIPMAP_NEAREST
+      );
+      gl.generateMipmap(textureType);
+      break;
+    default:
+      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(
+        textureType,
+        gl.TEXTURE_MIN_FILTER,
+        gl.NEAREST_MIPMAP_LINEAR
+      );
+      gl.generateMipmap(textureType);
+  }
 
   gl.bindTexture(textureType, null);
 

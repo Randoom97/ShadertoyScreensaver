@@ -21,7 +21,10 @@ export function App() {
       "XffBzl", // common code
       "XcfBRn", // simple
       "Xds3zN", // macros
+      "MdX3Rr", // negative alpha value in buffer (RGBA32F internal format)
+      "ssjyWc",
     ]);
+    // setShaderIds(["ssjyWc"]);
     // getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>
     //   setShaderIds(shaders.Results)
     // );

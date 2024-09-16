@@ -21,6 +21,9 @@ export function ShaderCanvas({
 
     if (glRef.current) {
       const gl = glRef.current;
+      // enables RGBA32F textures. Needed for negative alpha in some shaders
+      gl.getExtension("OES_texture_float_linear");
+      gl.getExtension("EXT_color_buffer_float");
       resize(gl, aspectRatio);
       initShader(gl, shader).then((shaderToy) => {
         if (!shaderToy) {
