@@ -38,9 +38,21 @@ export function ShaderCanvas({
         return;
       }
       resize(gl, aspectRatio);
+      // TODO: resize render buffers to match viewport
       renderShaderToy(gl, shaderToy);
     }
     window.addEventListener("resize", onResize);
+
+    function animationFrame() {
+      requestAnimationFrame(animationFrame);
+      const gl = glRef.current;
+      const shaderToy = shaderToyRef.current;
+      if (!gl || !shaderToy) {
+        return;
+      }
+      renderShaderToy(gl, shaderToy);
+    }
+    requestAnimationFrame(animationFrame);
 
     return () => {
       window.removeEventListener("resize", onResize);

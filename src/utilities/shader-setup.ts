@@ -16,6 +16,8 @@ export interface GLShader {
     iResolution: WebGLUniformLocation;
     iTime: WebGLUniformLocation;
     iFrameRate: WebGLUniformLocation;
+    iFrame: WebGLUniformLocation;
+    iChannelResolution: WebGLUniformLocation;
     iChannels: (WebGLUniformLocation | undefined)[];
   };
 }
@@ -24,14 +26,21 @@ export interface ShaderToy {
   image: GLShader;
   bufferShaders: GLShader[];
   buffers: Map<number, BufferPair>;
-  inputs: Map<number, WebGLTexture>;
+  inputs: Map<number, TextureAndSize>;
+  start: number;
+  frame: number;
+}
+
+export interface TextureAndSize {
+  texture: WebGLTexture;
+  size: { w: number; h: number };
 }
 
 export class BufferPair {
   constructor(
     public frameBuffer: WebGLFramebuffer,
-    public activeTexture: WebGLTexture,
-    public bufferTexture: WebGLTexture
+    public activeTexture: TextureAndSize,
+    public bufferTexture: TextureAndSize
   ) {}
 
   public swapTextures(gl: WebGL2RenderingContext) {
@@ -42,7 +51,7 @@ export class BufferPair {
       gl.FRAMEBUFFER,
       gl.COLOR_ATTACHMENT0,
       gl.TEXTURE_2D,
-      this.bufferTexture,
+      this.bufferTexture.texture,
       0
     );
   }
@@ -76,7 +85,7 @@ export async function initShader(
     return null;
   }
 
-  const inputs = new Map<number, WebGLTexture>();
+  const inputs = new Map<number, TextureAndSize>();
   const buffers = new Map<number, BufferPair>();
   for (const renderpass of shader.renderpass) {
     for (const input of renderpass.inputs) {
@@ -112,6 +121,8 @@ export async function initShader(
     bufferShaders: bufferShaders as GLShader[], // type checked to not have null just after creation
     buffers,
     inputs,
+    start: new Date().getTime() / 1000,
+    frame: 0,
   };
 }
 
@@ -202,6 +213,11 @@ function initRenderPass(
       iResolution: gl.getUniformLocation(shaderProgram, "iResolution")!,
       iTime: gl.getUniformLocation(shaderProgram, "iTime")!,
       iFrameRate: gl.getUniformLocation(shaderProgram, "iFrameRate")!,
+      iFrame: gl.getUniformLocation(shaderProgram, "iFrame")!,
+      iChannelResolution: gl.getUniformLocation(
+        shaderProgram,
+        "iChannelResolution"
+      )!,
       iChannels: [
         gl.getUniformLocation(shaderProgram, "iChannel0") ?? undefined,
         gl.getUniformLocation(shaderProgram, "iChannel1") ?? undefined,
@@ -268,15 +284,18 @@ function createTexture({
   gl: WebGL2RenderingContext;
   input: RenderPassInput;
   media?: HTMLImageElement[] | HTMLImageElement | null;
-}): WebGLTexture {
+}): TextureAndSize {
   const texture = gl.createTexture()!;
   let textureType: GLint;
+  let size = { w: gl.canvas.width, h: gl.canvas.height };
 
   if (media instanceof HTMLImageElement) {
+    size = { w: media.width, h: media.height };
     textureType = gl.TEXTURE_2D;
     gl.bindTexture(textureType, texture);
     gl.texImage2D(textureType, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, media);
   } else if (media !== null) {
+    size = { w: media[0].width, h: media[0].height };
     textureType = gl.TEXTURE_CUBE_MAP;
     gl.bindTexture(textureType, texture);
     media.forEach((media, idx) => {
@@ -311,7 +330,7 @@ function createTexture({
 
   gl.bindTexture(textureType, null);
 
-  return texture;
+  return { texture, size };
 }
 
 // because shader code is being spliced together, the line numbers from the info log are hard to match without this
