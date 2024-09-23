@@ -1,8 +1,9 @@
 import "./ShaderCanvas.css";
 import { Shader } from "../../utilities/tauri-commands";
-import { initShader, ShaderToy } from "../../utilities/shader-setup";
 import { renderShaderToy } from "../../utilities/shader-render";
 import { createRef, useEffect, useRef } from "react";
+import { ShaderToy } from "../../utilities/shader/interfaces";
+import { initShader } from "../../utilities/shader/pipeline";
 
 export function ShaderCanvas({
   shader,

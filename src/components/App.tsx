@@ -22,7 +22,7 @@ export function App() {
       "XcfBRn", // simple
       "Xds3zN", // macros
       "MdX3Rr", // negative alpha value in buffer (RGBA32F internal format)
-      "ssjyWc",
+      "ssjyWc", // TODO figure out what's wrong with this one
     ]);
     // setShaderIds(["ssjyWc"]);
     // getShaders({ sortBy, pageSize: 12, pageNumber: 0 }).then((shaders) =>

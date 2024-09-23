@@ -3,7 +3,7 @@ import {
   GLShader,
   ShaderToy,
   TextureAndSize,
-} from "./shader-setup";
+} from "./shader/interfaces";
 
 export function renderShaderToy(
   gl: WebGL2RenderingContext,
@@ -29,7 +29,7 @@ export function renderShaderToy(
   gl.clear(gl.COLOR_BUFFER_BIT);
   renderShader(
     gl,
-    shaderToy.image,
+    shaderToy.imageShader,
     shaderToy.buffers,
     shaderToy.inputs,
     shaderToy
