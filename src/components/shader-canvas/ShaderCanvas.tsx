@@ -1,9 +1,8 @@
 import "./ShaderCanvas.css";
 import { Shader } from "../../utilities/tauri-commands";
-import { renderShaderToy } from "../../utilities/shader-render";
 import { createRef, useEffect, useRef } from "react";
-import { ShaderToy } from "../../utilities/shader/interfaces";
 import { initShader } from "../../utilities/shader/pipeline";
+import { Renderer } from "../../utilities/shader/renderer";
 
 export function ShaderCanvas({
   shader,
@@ -13,7 +12,7 @@ export function ShaderCanvas({
   aspectRatio: number | undefined;
 }) {
   const glRef = useRef<WebGL2RenderingContext>();
-  const shaderToyRef = useRef<ShaderToy>();
+  const rendererRef = useRef<Renderer>();
   const canvasRef = createRef<HTMLCanvasElement>();
 
   useEffect(() => {
@@ -30,33 +29,25 @@ export function ShaderCanvas({
         if (!shaderToy) {
           return;
         }
-        shaderToyRef.current = shaderToy;
-        renderShaderToy(gl, shaderToy);
+        const renderer = new Renderer(gl, shaderToy);
+        rendererRef.current = renderer;
+        // give it just a tiny bit of time to render on load
+        renderer.renderLoop();
+        setTimeout(() => renderer.suspend(), 100);
       });
     }
 
-    function onResize() {
+    const onResize = () => {
       const gl = glRef.current;
-      const shaderToy = shaderToyRef.current;
-      if (!gl || !shaderToy) {
+      const renderer = rendererRef.current;
+      if (!gl || !renderer) {
         return;
       }
       resize(gl, aspectRatio);
       // TODO: resize render buffers to match viewport
-      renderShaderToy(gl, shaderToy);
-    }
+      renderer.renderOnce();
+    };
     window.addEventListener("resize", onResize);
-
-    function animationFrame() {
-      requestAnimationFrame(animationFrame);
-      const gl = glRef.current;
-      const shaderToy = shaderToyRef.current;
-      if (!gl || !shaderToy) {
-        return;
-      }
-      renderShaderToy(gl, shaderToy);
-    }
-    requestAnimationFrame(animationFrame);
 
     return () => {
       window.removeEventListener("resize", onResize);
@@ -64,7 +55,14 @@ export function ShaderCanvas({
     };
   }, []);
 
-  return <canvas ref={canvasRef} className="shader-canvas"></canvas>;
+  return (
+    <canvas
+      ref={canvasRef}
+      className="shader-canvas"
+      onMouseEnter={() => rendererRef.current?.renderLoop()}
+      onMouseLeave={() => rendererRef.current?.suspend()}
+    ></canvas>
+  );
 }
 
 function resize(gl: WebGL2RenderingContext, aspectRatio: number | undefined) {

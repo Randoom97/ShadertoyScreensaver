@@ -21,9 +21,6 @@ export interface ShaderToy {
   bufferShaders: GLShader[];
   buffers: Map<number, BufferPair>;
   inputs: Map<number, TextureAndSize>;
-  // TODO move the following two into a renderer class
-  start: number;
-  frame: number;
 }
 
 export interface TextureAndSize {

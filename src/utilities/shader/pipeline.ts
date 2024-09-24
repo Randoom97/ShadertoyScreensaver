@@ -20,8 +20,6 @@ export async function initShader(
     bufferShaders,
     buffers,
     inputs,
-    start: new Date().getTime() / 1000,
-    frame: 0,
   };
 }
 
