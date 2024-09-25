@@ -22,7 +22,8 @@ uniform float iChannelTime[4];
 uniform vec3 iChannelResolution[4];
 uniform vec4 iMouse;
 uniform vec4 iDate;
-uniform float iSampleRate;`;
+uniform float iSampleRate;
+`;
 
 const fragmentMain = `
 out vec4 fragColor;
@@ -35,9 +36,15 @@ void main(void) {
 export function compileRenderPass(
   gl: WebGL2RenderingContext,
   renderPass: RenderPass,
-  common: RenderPass | undefined = undefined
+  common: RenderPass | undefined = undefined,
+  shaderId: string
 ): GLShader | null {
-  const vertexShader = createGLShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+  const vertexShader = createGLShader(
+    gl,
+    gl.VERTEX_SHADER,
+    vertexShaderSource,
+    shaderId
+  );
   if (vertexShader === null) {
     return null;
   }
@@ -50,18 +57,23 @@ export function compileRenderPass(
   [0, 1, 2, 3].forEach((channel) => {
     const type =
       cubemapChannels.find((c) => c === channel) !== undefined ? "Cube" : "2D";
-    fragmentSource += `
-    uniform sampler${type} iChannel${channel};`;
+    fragmentSource += `uniform sampler${type} iChannel${channel};
+    `;
   });
 
   fragmentSource += fragmentMain;
 
   if (common) {
-    fragmentSource += common.code;
+    fragmentSource += common.code + "\n";
   }
   fragmentSource += renderPass.code;
 
-  const fragmentShader = createGLShader(gl, gl.FRAGMENT_SHADER, fragmentSource);
+  const fragmentShader = createGLShader(
+    gl,
+    gl.FRAGMENT_SHADER,
+    fragmentSource,
+    shaderId
+  );
   if (fragmentShader === null) {
     return null;
   }
@@ -106,7 +118,8 @@ export function compileRenderPass(
 function createGLShader(
   gl: WebGL2RenderingContext,
   type: GLenum,
-  source: string
+  source: string,
+  id: string
 ) {
   const shader = gl.createShader(type)!;
 
@@ -114,7 +127,7 @@ function createGLShader(
   gl.compileShader(shader);
 
   if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    console.log("an error occured compiling shader!");
+    console.log(`an error occured compiling shader ${id}!`);
     logShaderError(gl, shader);
     gl.deleteShader(shader);
     return null;

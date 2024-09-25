@@ -41,7 +41,7 @@ function compileRenderPasses(gl: WebGL2RenderingContext, shader: Shader) {
     (renderpass) => renderpass.type === RenderPassType.Common
   );
 
-  const imageShader = compileRenderPass(gl, image, common);
+  const imageShader = compileRenderPass(gl, image, common, shader.info.id);
   if (!imageShader) {
     return null;
   }
@@ -50,7 +50,12 @@ function compileRenderPasses(gl: WebGL2RenderingContext, shader: Shader) {
   for (const renderPass of shader.renderpass.filter(
     (pass) => pass.type === RenderPassType.Buffer
   )) {
-    const bufferShader = compileRenderPass(gl, renderPass, common);
+    const bufferShader = compileRenderPass(
+      gl,
+      renderPass,
+      common,
+      shader.info.id
+    );
     if (bufferShader === null) {
       return null;
     }
