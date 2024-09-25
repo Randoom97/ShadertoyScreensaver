@@ -2,74 +2,109 @@ import { convertFileSrc } from "@tauri-apps/api/tauri";
 import { getMediaPath, RenderPassInput } from "../tauri-commands";
 import { TextureAndSize } from "./interfaces";
 
-export async function loadTexture({
-  gl,
-  input,
-  media,
-}: {
-  gl: WebGL2RenderingContext;
-  input: RenderPassInput;
-  media: string[] | string;
-}) {
-  if (typeof media === "string") {
-    const image = await loadImage(media);
-    return createTexture({ gl, input, media: image });
-  } else {
-    const images: HTMLImageElement[] = await Promise.all(
-      media.map((path) => loadImage(path))
-    );
-    return createTexture({ gl, input, media: images });
-  }
+type TextureType = Texture | CubeMap | Buffer | Keyboard;
+class Texture {
+  constructor(public readonly image: HTMLImageElement) {}
+}
+class CubeMap {
+  constructor(public readonly images: HTMLImageElement[]) {}
+}
+class Buffer {}
+class Keyboard {}
+
+export async function loadTexture(
+  gl: WebGL2RenderingContext,
+  input: RenderPassInput,
+  imageUrl: string
+) {
+  const image = await loadImage(imageUrl);
+  return createTexture({ gl, input, texType: new Texture(image) });
+}
+
+export async function loadCubemap(
+  gl: WebGL2RenderingContext,
+  input: RenderPassInput,
+  imageUrls: string[]
+) {
+  const images: HTMLImageElement[] = await Promise.all(
+    imageUrls.map((imageUrl) => loadImage(imageUrl))
+  );
+  return createTexture({ gl, input, texType: new CubeMap(images) });
 }
 
 export function createBufferTexture(
   gl: WebGL2RenderingContext,
   input: RenderPassInput
 ) {
-  return createTexture({ gl, input });
+  return createTexture({ gl, input, texType: new Buffer() });
+}
+
+export function createKeyboardTexture(
+  gl: WebGL2RenderingContext,
+  input: RenderPassInput
+) {
+  return createTexture({ gl, input, texType: new Keyboard() });
 }
 
 function createTexture({
   gl,
   input,
-  media = null,
+  texType,
 }: {
   gl: WebGL2RenderingContext;
   input: RenderPassInput;
-  media?: HTMLImageElement[] | HTMLImageElement | null;
+  texType: TextureType;
 }): TextureAndSize {
   const texture = gl.createTexture()!;
-  let textureType: GLint;
-  let size = { w: gl.canvas.width, h: gl.canvas.height };
+  let glTextureType: GLint;
+  let size: { w: number; h: number };
 
-  if (media instanceof HTMLImageElement) {
-    size = { w: media.width, h: media.height };
-    textureType = gl.TEXTURE_2D;
-    gl.bindTexture(textureType, texture);
-    gl.texImage2D(textureType, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, media);
-  } else if (media !== null) {
-    size = { w: media[0].width, h: media[0].height };
-    textureType = gl.TEXTURE_CUBE_MAP;
-    gl.bindTexture(textureType, texture);
-    media.forEach((media, idx) => {
+  if (texType instanceof Texture) {
+    const image = texType.image;
+    size = { w: image.width, h: image.height };
+    glTextureType = gl.TEXTURE_2D;
+    gl.bindTexture(glTextureType, texture);
+    gl.texImage2D(glTextureType, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+  } else if (texType instanceof CubeMap) {
+    const images = texType.images;
+    size = { w: images[0].width, h: images[0].height };
+    glTextureType = gl.TEXTURE_CUBE_MAP;
+    gl.bindTexture(glTextureType, texture);
+    images.forEach((image, idx) => {
       gl.texImage2D(
         gl.TEXTURE_CUBE_MAP_POSITIVE_X + idx,
         0,
         gl.RGB,
         gl.RGB,
         gl.UNSIGNED_BYTE,
-        media
+        image
       );
     });
-  } else {
-    textureType = gl.TEXTURE_2D;
-    gl.bindTexture(textureType, texture);
+  } else if (texType instanceof Keyboard) {
+    glTextureType = gl.TEXTURE_2D;
+    size = { w: 256, h: 3 };
+    gl.bindTexture(glTextureType, texture);
     gl.texImage2D(
-      textureType,
+      glTextureType,
+      0,
+      gl.R8,
+      size.w,
+      size.h,
+      0,
+      gl.RED,
+      gl.UNSIGNED_BYTE,
+      null
+    );
+  } else {
+    glTextureType = gl.TEXTURE_2D;
+    size = { w: gl.canvas.width, h: gl.canvas.height };
+    gl.bindTexture(glTextureType, texture);
+    gl.texImage2D(
+      glTextureType,
       0,
       gl.RGBA32F,
-      gl.canvas.width,
-      gl.canvas.height,
+      size.w,
+      size.h,
       0,
       gl.RGBA,
       gl.FLOAT,
@@ -78,38 +113,38 @@ function createTexture({
   }
 
   const wrap = input.sampler.wrap === "clamp" ? gl.CLAMP_TO_EDGE : gl.REPEAT;
-  gl.texParameteri(textureType, gl.TEXTURE_WRAP_S, wrap);
-  gl.texParameteri(textureType, gl.TEXTURE_WRAP_T, wrap);
+  gl.texParameteri(glTextureType, gl.TEXTURE_WRAP_S, wrap);
+  gl.texParameteri(glTextureType, gl.TEXTURE_WRAP_T, wrap);
 
   switch (input.sampler.filter) {
     case "none":
-      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(glTextureType, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(glTextureType, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
       break;
     case "linear":
-      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(textureType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(glTextureType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(glTextureType, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       break;
     case "mipmap":
-      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(glTextureType, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texParameteri(
-        textureType,
+        glTextureType,
         gl.TEXTURE_MIN_FILTER,
         gl.LINEAR_MIPMAP_NEAREST
       );
-      gl.generateMipmap(textureType);
+      gl.generateMipmap(glTextureType);
       break;
     default:
-      gl.texParameteri(textureType, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(glTextureType, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
       gl.texParameteri(
-        textureType,
+        glTextureType,
         gl.TEXTURE_MIN_FILTER,
         gl.NEAREST_MIPMAP_LINEAR
       );
-      gl.generateMipmap(textureType);
+      gl.generateMipmap(glTextureType);
   }
 
-  gl.bindTexture(textureType, null);
+  gl.bindTexture(glTextureType, null);
 
   return { texture, size };
 }

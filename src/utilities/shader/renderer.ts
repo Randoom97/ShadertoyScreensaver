@@ -86,6 +86,12 @@ export class Renderer {
               type: this.gl.TEXTURE_CUBE_MAP,
               ...this.shaderToy.inputs.get(input.id)!,
             };
+          case "keyboard":
+            return {
+              channel: input.channel,
+              type: this.gl.TEXTURE_2D,
+              ...this.shaderToy.inputs.get(input.id)!,
+            };
         }
         return undefined;
       })

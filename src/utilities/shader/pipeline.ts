@@ -1,7 +1,12 @@
 import { RenderPassInput, RenderPassType, Shader } from "../tauri-commands";
 import { compileRenderPass } from "./compiler";
 import { BufferPair, GLShader, ShaderToy, TextureAndSize } from "./interfaces";
-import { createBufferTexture, loadTexture } from "./texture";
+import {
+  createBufferTexture,
+  createKeyboardTexture,
+  loadCubemap,
+  loadTexture,
+} from "./texture";
 
 export async function initShader(
   gl: WebGL2RenderingContext,
@@ -71,10 +76,7 @@ async function initInputsAndBuffers(
           buffers.set(input.id, createBufferPair({ gl, input }));
           break;
         case "texture":
-          inputs.set(
-            input.id,
-            await loadTexture({ gl, input, media: input.src })
-          );
+          inputs.set(input.id, await loadTexture(gl, input, input.src));
           break;
         case "cubemap":
           let [path, extension] = input.src.split(".");
@@ -84,8 +86,10 @@ async function initInputsAndBuffers(
             path + extension,
             ...[1, 2, 3, 4, 5].map((i) => `${path}_${i}${extension}`),
           ];
-          inputs.set(input.id, await loadTexture({ gl, input, media: paths }));
+          inputs.set(input.id, await loadCubemap(gl, input, paths));
           break;
+        case "keyboard": // receives erroneous data from iChannel when a 0 texture isn't bound
+          inputs.set(input.id, createKeyboardTexture(gl, input));
       }
     }
   }
