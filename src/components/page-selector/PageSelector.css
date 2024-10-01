@@ -1,10 +1,10 @@
-.sort-bar {
+.page-selector {
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-.sort-bar-text {
+.page-selector-text {
     margin: 4px;
     margin-left: 0px;
 }

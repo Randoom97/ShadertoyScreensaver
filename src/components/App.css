@@ -5,8 +5,15 @@
   box-sizing: border-box;
 }
 
+.control-bar {
+  display: flex;
+  flex-direction: row;
+  padding: 0px 16px;
+}
+
 .sort-bar {
   flex-shrink: 0;
+  flex-grow: 1;
 }
 
 .gallery {
