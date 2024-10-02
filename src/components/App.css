@@ -5,6 +5,10 @@
   box-sizing: border-box;
 }
 
+.search-bar {
+  margin: 16px 16px 8px 16px;
+}
+
 .control-bar {
   display: flex;
   flex-direction: row;

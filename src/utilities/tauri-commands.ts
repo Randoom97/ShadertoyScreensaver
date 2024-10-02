@@ -80,18 +80,14 @@ interface Sampler {
 }
 
 export function getShaders(
-  args: { sortBy?: SortBy; pageSize?: number; pageNumber?: number } = {}
+  args: {
+    query?: string;
+    sortBy?: SortBy;
+    pageSize?: number;
+    pageNumber?: number;
+  } = {}
 ): Promise<Shaders> {
   return invoke("get_shaders", args);
-}
-
-export function queryShaders(args: {
-  query: string;
-  sortBy?: SortBy;
-  pageSize?: number;
-  pageNumber?: number;
-}) {
-  return invoke("query_shaders", args);
 }
 
 export function getShader(id: string): Promise<Shader> {

@@ -107,30 +107,20 @@ struct Sampler {
 #[tauri::command]
 pub async fn get_shaders(
     shadertoy_api: tauri::State<'_, ShadertoyAPI>,
+    query: Option<String>,
     sort_by: Option<SortBy>,
     page_size: Option<u64>,
     page_number: Option<u64>,
 ) -> Result<Shaders, String> {
-    return print_and_map_error(
+    return print_and_map_error(if query.is_some() {
+        shadertoy_api
+            .query_shaders(query.as_ref().unwrap(), &sort_by, &page_size, &page_number)
+            .await
+    } else {
         shadertoy_api
             .get_shaders(&sort_by, &page_size, &page_number)
-            .await,
-    );
-}
-
-#[tauri::command]
-pub async fn query_shaders(
-    shadertoy_api: tauri::State<'_, ShadertoyAPI>,
-    query: String,
-    sort_by: Option<SortBy>,
-    page_size: Option<u64>,
-    page_number: Option<u64>,
-) -> Result<Shaders, String> {
-    return print_and_map_error(
-        shadertoy_api
-            .query_shaders(&query, &sort_by, &page_size, &page_number)
-            .await,
-    );
+            .await
+    });
 }
 
 #[tauri::command]

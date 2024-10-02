@@ -39,7 +39,6 @@ fn main() {
         .manage(ShadertoyAPI::new())
         .invoke_handler(tauri::generate_handler![
             tauri_commands::get_shaders,
-            tauri_commands::query_shaders,
             tauri_commands::get_shader,
             tauri_commands::get_media_path,
         ])
