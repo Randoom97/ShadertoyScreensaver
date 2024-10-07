@@ -24,7 +24,13 @@ export default defineConfig(async () => ({
       input: {
         config: "./config.html",
         screensaver: "./screensaver.html",
-      }
-    }
-  }
+      },
+    },
+  },
+
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: "./src/tests/setup.ts",
+  },
 }));
