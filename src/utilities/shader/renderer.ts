@@ -1,4 +1,6 @@
+import { Shader } from "../tauri-commands";
 import { GLShader, ShaderToy } from "./interfaces";
+import { initShader } from "./pipeline";
 
 interface GLInput {
   channel: number;
@@ -13,7 +15,35 @@ export class Renderer {
   private startTime: number | undefined = 0; // undefined means not looping
   private frame: number = 0;
 
-  constructor(
+  static createRenderer(
+    canvas: HTMLCanvasElement,
+    shader: Shader,
+    aspectRatio?: number
+  ): Promise<Renderer> {
+    return new Promise<Renderer>(async (resolve, reject) => {
+      const gl = canvas.getContext("webgl2");
+      if (gl === null) {
+        reject();
+        return;
+      }
+
+      // enables RGBA32F textures. Needed for negative alpha in some shaders
+      gl.getExtension("OES_texture_float_linear");
+      gl.getExtension("EXT_color_buffer_float");
+
+      // resize here before initShader to make sure buffers end up the right size
+      Renderer.resize(gl, aspectRatio);
+
+      const shaderToy = await initShader(gl, shader);
+      if (!shaderToy) {
+        reject();
+        return;
+      }
+      resolve(new Renderer(gl, shaderToy));
+    });
+  }
+
+  private constructor(
     private gl: WebGL2RenderingContext,
     private shaderToy: ShaderToy
   ) {
@@ -25,6 +55,23 @@ export class Renderer {
       this.gl.STATIC_DRAW
     );
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null);
+  }
+
+  private static resize(gl: WebGL2RenderingContext, aspectRatio?: number) {
+    if (gl.canvas instanceof HTMLCanvasElement) {
+      gl.canvas.width = gl.canvas.clientWidth;
+      if (aspectRatio) {
+        gl.canvas.height = gl.canvas.clientWidth / aspectRatio;
+      } else {
+        gl.canvas.height = gl.canvas.clientHeight;
+      }
+    }
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  }
+
+  public resize(aspectRatio?: number) {
+    Renderer.resize(this.gl, aspectRatio);
+    // TODO: resize render buffers to match viewport
   }
 
   public suspend() {
