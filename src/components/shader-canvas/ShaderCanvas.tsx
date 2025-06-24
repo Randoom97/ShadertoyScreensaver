@@ -10,7 +10,7 @@ export function ShaderCanvas({
   shader: Shader;
   aspectRatio?: number;
 }) {
-  const rendererRef = useRef<Renderer>();
+  const rendererRef = useRef<Renderer>(undefined);
   const canvasRef = createRef<HTMLCanvasElement>();
 
   useEffect(() => {
