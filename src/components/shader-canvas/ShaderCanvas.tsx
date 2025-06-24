@@ -8,7 +8,7 @@ export function ShaderCanvas({
   aspectRatio = undefined,
 }: {
   shader: Shader;
-  aspectRatio: number | undefined;
+  aspectRatio?: number;
 }) {
   const rendererRef = useRef<Renderer>();
   const canvasRef = createRef<HTMLCanvasElement>();

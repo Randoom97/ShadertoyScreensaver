@@ -32,5 +32,10 @@ export default defineConfig(async () => ({
     globals: true,
     environment: "jsdom",
     setupFiles: "./src/tests/setup.ts",
+    browser: {
+      name: "chromium",
+      provider: "playwright",
+      enabled: true,
+    },
   },
 }));

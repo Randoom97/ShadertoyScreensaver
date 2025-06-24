@@ -23,7 +23,7 @@ export class Renderer {
     return new Promise<Renderer>(async (resolve, reject) => {
       const gl = canvas.getContext("webgl2");
       if (gl === null) {
-        reject();
+        reject("could not obtain a gl context");
         return;
       }
 
@@ -36,7 +36,7 @@ export class Renderer {
 
       const shaderToy = await initShader(gl, shader);
       if (!shaderToy) {
-        reject();
+        reject("could not initialize shader toy");
         return;
       }
       resolve(new Renderer(gl, shaderToy));

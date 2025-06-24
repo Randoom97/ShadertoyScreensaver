@@ -8,7 +8,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test:frontend": "vitest"
+    "test:frontend": "vitest --browser.headless",
+    "test-browser:frontend": "vitest"
   },
   "dependencies": {
     "@tauri-apps/api": "^1",
@@ -27,9 +28,11 @@
     "@types/react": "npm:types-react@rc",
     "@types/react-dom": "npm:types-react-dom@rc",
     "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/browser": "^2.1.8",
     "jsdom": "^25.0.1",
+    "playwright": "^1.49.1",
     "typescript": "^5.0.2",
     "vite": "^5.0.0",
-    "vitest": "^2.1.2"
+    "vitest": "^2.1.8"
   }
 }
